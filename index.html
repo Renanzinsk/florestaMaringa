@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Árvores</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/supercluster@7.1.5/dist/supercluster.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --verde-profundo: #1b3b28;
+            --verde-folha: #2d6a4f;
+            --areia: #f4f1ea;
+            --dourado: #c1a673;
+            --texto: #2c2c2c;
+        }
+
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Lora', serif; background-color: var(--areia); overflow: hidden; }
+        
+        .navbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 70px;
+            background: var(--verde-profundo);
+            border-bottom: 3px solid var(--dourado);
+            display: flex;
+            align-items: center;
+            padding: 0 30px;
+            z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            gap: 20px; /* Garante o espaço entre Logo e Botão Filtro */
+        }
+        
+        .marca {
+            color: var(--areia);
+            text-decoration: none;
+            font-size: 24px;
+            font-family: 'Playfair Display', serif;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        .nav-link {
+            color: var(--areia);
+            text-decoration: none;
+            font-size: 15px;
+            padding: 8px 16px;
+            border: 1px solid var(--dourado);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: transparent;
+            font-family: 'Lora', serif;
+            white-space: nowrap;
+        }
+
+        .nav-link:hover {
+            background: var(--dourado);
+            color: var(--verde-profundo);
+        }
+
+        /* Usamos um espaçador flexível para jogar o "Sobre" para a direita */
+        .spacer {
+            flex-grow: 1;
+        }
+        
+        #meu_mapa { height: calc(100vh - 70px); width: 100vw; margin-top: 70px; position: fixed; z-index: 1; }
+        
+        /* Painel de Filtro Lateral Esquerda */
+        .painel-filtro {
+            position: fixed;
+            top: 70px;
+            left: -350px; /* Escondido totalmente à esquerda da tela */
+            width: 320px;
+            height: calc(100vh - 70px);
+            background: var(--areia);
+            padding: 30px;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.2);
+            z-index: 1001;
+            transition: left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-sizing: border-box;
+            border-right: 2px solid var(--dourado);
+        }
+        
+        .painel-filtro.open { 
+            left: 0; /* Ao adicionar a classe, o painel desliza para a tela vindo da esquerda */
+        } 
+        
+        .painel-filtro h3 { 
+            margin: 0 0 25px; 
+            color: var(--verde-profundo); 
+            font-family: 'Playfair Display', serif;
+            font-size: 26px;
+            border-bottom: 1px solid var(--dourado);
+            padding-bottom: 10px;
+        }
+        
+        .painel-filtro .close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            cursor: pointer;
+            font-size: 30px;
+            color: var(--verde-profundo);
+        }
+        
+        .form-group { margin-bottom: 25px; }
+        .form-group label { display: block; margin-bottom: 10px; font-weight: 600; }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: 'Lora', serif;
+            box-sizing: border-box;
+        }
+
+        .btn-acao {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-family: 'Lora', serif;
+            font-weight: 600;
+            margin-bottom: 12px;
+            transition: 0.3s;
+        }
+
+        #aplicarFiltro { background: var(--verde-folha); color: white; }
+        #aplicarFiltro:hover { background: var(--verde-profundo); }
+        #limparFiltro { background: transparent; color: var(--texto); border: 1px solid #ccc; }
+
+        .loading {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--verde-profundo);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            z-index: 500;
+            font-size: 14px;
+            display: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .loading.show { display: block; }
+        
+        .cluster-marker { background: transparent; border: none; }
+        
+        .cluster-circle {
+            width: 28px;
+            height: 28px;
+            background: var(--verde-folha);
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 11px;
+        }
+        
+        @media (max-width: 600px) {
+            .navbar { padding: 0 15px; height: 60px; gap: 10px; }
+            .marca { font-size: 18px; }
+            .nav-link { padding: 6px 10px; font-size: 13px; }
+            #meu_mapa, .painel-filtro { top: 60px; height: calc(100vh - 60px); }
+            .painel-filtro { width: 100%; left: -100%; } /* No mobile garante que saia toda da tela */
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="#" class="marca">Mapa de Árvores</a>
+        <button class="nav-link" id="btnFiltro">Filtrar Espécies</button>
+        
+        <div class="spacer"></div>
+        
+        <a href="sobre.html" class="nav-link">Sobre</a>
+    </nav>
+    
+    <div id="meu_mapa"></div>
+
+    <div class="loading" id="loading">Carregando...</div>
+
+    <div class="painel-filtro" id="painelFiltro">
+        <span class="close" id="closeFiltro">&times;</span>
+        <h3>Catálogo de Filtros</h3>
+        
+        <div class="form-group">
+            <label>Nome da Espécie:</label>
+            <input type="text" id="inputNomePainel" placeholder="Ex: Ipê, Carvalho...">
+        </div>
+        
+        <button id="aplicarFiltro" class="btn-acao">Aplicar Filtro</button>
+        <button id="limparFiltro" class="btn-acao">Limpar Tudo</button>
+    </div>
+
+    <script>
+        const btnFiltro = document.getElementById('btnFiltro');
+        const painelFiltro = document.getElementById('painelFiltro');
+        const closeFiltro = document.getElementById('closeFiltro');
+        
+        // Controla a abertura do menu pela esquerda
+        btnFiltro.addEventListener('click', () => painelFiltro.classList.add('open'));
+        closeFiltro.addEventListener('click', () => painelFiltro.classList.remove('open'));
+        
+        document.getElementById('aplicarFiltro').addEventListener('click', () => {
+            const nome = document.getElementById('inputNomePainel').value;
+            if (nome) setFiltroNome(nome);
+            carregarArvoresNaTela();
+            painelFiltro.classList.remove('open');
+        });
+        
+        document.getElementById('limparFiltro').addEventListener('click', () => {
+            document.getElementById('inputNomePainel').value = '';
+            setFiltroNome(null);
+            carregarArvoresNaTela();
+            painelFiltro.classList.remove('open');
+        });
+    </script>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="mapa.js"></script>
+</body>
+</html>

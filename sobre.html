@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sobre - Mapa de Árvores</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --verde-profundo: #1b3b28;
+            --verde-folha: #2d6a4f;
+            --areia: #f4f1ea;
+            --dourado: #c1a673;
+            --texto: #2c2c2c;
+        }
+
+        body { font-family: 'Lora', serif; background: var(--areia); color: var(--texto); margin: 0; }
+        
+        .navbar {
+            height: 70px;
+            background: var(--verde-profundo);
+            border-bottom: 3px solid var(--dourado);
+            display: flex;
+            align-items: center;
+            padding: 0 30px;
+        }
+        
+        .voltar {
+            color: var(--areia);
+            text-decoration: none;
+            font-size: 15px;
+            padding: 8px 16px;
+            border: 1px solid var(--dourado);
+            border-radius: 4px;
+            font-family: 'Lora', serif;
+            transition: all 0.3s ease;
+        }
+
+        .voltar:hover { background: var(--dourado); color: var(--verde-profundo); }
+
+        .container {
+            max-width: 800px;
+            margin: 60px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            border: 1px solid rgba(193, 166, 115, 0.2);
+        }
+        
+        h1 { font-family: 'Playfair Display', serif; color: var(--verde-profundo); font-size: 36px; text-align: center; }
+        h2 { font-family: 'Playfair Display', serif; color: var(--dourado); border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-top: 40px;}
+        p { line-height: 1.8; font-size: 17px; text-align: justify; }
+
+        .creditos { 
+            margin-top: 50px; 
+            background: #faf9f5; 
+            padding: 25px; 
+            border-left: 5px solid var(--dourado); 
+        }
+        
+        .creditos p { margin-top: 0; margin-bottom: 15px; font-size: 16px;}
+        .creditos p:last-child { margin-bottom: 0; }
+        
+        /* Estilo elegante para os links de crédito */
+        .link-credito {
+            color: var(--verde-folha);
+            text-decoration: none;
+            font-weight: 600;
+            border-bottom: 1px dashed var(--verde-folha);
+            transition: color 0.3s, border-color 0.3s;
+        }
+        
+        .link-credito:hover {
+            color: var(--verde-profundo);
+            border-bottom: 1px solid var(--verde-profundo);
+        }
+
+        @media (max-width: 600px) {
+            .container { margin: 40px 15px; padding: 25px; }
+            h1 { font-size: 28px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="index.html" class="voltar">Voltar ao Mapa</a>
+    </nav>
+
+    <div class="container">
+        <h1>Sobre este site</h1>
+        
+        <h2>Objetivo</h2>
+        <p>Buscar desenvolver uma forma de retratar, de maneira prática e interativa, a visualização das árvores da cidade. Através deste mapeamento em um catálogo digital, buscamos auxiliar na melhor gestão ambiental e na valorização da nossa flora urbana, permitindo que cidadãos e gestores tenham uma visão clara e acessível do patrimônio natural ao seu redor.</p>
+        
+        <div class="creditos">
+            <p><strong>Desenvolvimento:</strong> Renan</p>
+            
+            <p><strong>Levantamento e Compilação de Dados:</strong>
+                <p><a href="https://www.brunomioto.com/posts/trees_mga/pt/#as-%C3%A1rvores" target="_blank" class="link-credito">artigo original</a> </p>
+                <p>ou </p>
+                <p>acessar a base de dados completa através de seu repositório no <a href="https://github.com/brunomioto/arvores_mga" target="_blank" class="link-credito">GitHub</a>.</p>
+        </div>
+    </div>
+</body>
+</html>
