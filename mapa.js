@@ -108,7 +108,8 @@ function renderizarClusters() {
                 .addTo(camadaClusters);
         } else {
             L.marker([lat, lng], { icon: iconArvore })
-                .bindPopup(`<b>${props.nome}</b><br>${props.cientifico}`)
+                .bindPopup(`<b>${props.nome}</b><br>${props.cientifico}<br><a href="#" onclick="abrirModalArvore(${props.id})" style="color:#2d6a4f;">Ver avaliações</a>`)
+                .on('click', () => abrirModalArvore(props.id))
                 .addTo(camadaArvores);
         }
     });
@@ -136,10 +137,11 @@ async function carregarArvoresNaTela() {
     
     mostraLoading(true);
     
-    let url = `https://florestaapi.renanzinsk.com.br/api/arvores/viewport?minLat=${bounds.getSouth()}&maxLat=${bounds.getNorth()}&minLng=${bounds.getWest()}&maxLng=${bounds.getEast()}&centerLat=${getCentroViewport().lat}&centerLng=${getCentroViewport().lng}&limit=1000&shuffle=${isShuffle}`;
+    const API_ARVORES = 'http://localhost:8080/api/arvores';
+    let url = `${API_ARVORES}/viewport?minLat=${bounds.getSouth()}&maxLat=${bounds.getNorth()}&minLng=${bounds.getWest()}&maxLng=${bounds.getEast()}&centerLat=${getCentroViewport().lat}&centerLng=${getCentroViewport().lng}&limit=1000&shuffle=${isShuffle}`;
     
     if (filtroNome) {
-        url = `https://florestaapi.renanzinsk.com.br/api/arvores/filter?q=${encodeURIComponent(filtroNome)}&minLat=${bounds.getSouth()}&maxLat=${bounds.getNorth()}&minLng=${bounds.getWest()}&maxLng=${bounds.getEast()}&centerLat=${getCentroViewport().lat}&centerLng=${getCentroViewport().lng}&limit=1000`;
+        url = `${API_ARVORES}/filter?q=${encodeURIComponent(filtroNome)}&minLat=${bounds.getSouth()}&maxLat=${bounds.getNorth()}&minLng=${bounds.getWest()}&maxLng=${bounds.getEast()}&centerLat=${getCentroViewport().lat}&centerLng=${getCentroViewport().lng}&limit=1000`;
     }
     
     try {
@@ -168,3 +170,247 @@ mapa.on('moveend', carregarDebounced);
 mapa.on('zoomend', carregarDebounced);
 
 setTimeout(carregarArvoresNaTela, 500);
+
+// === Modal de Avaliações ===
+let arvoreModalAtual = null;
+let avaliacaoEditandoId = null;
+
+const modal = document.getElementById('modalArvore');
+const modalClose = document.getElementById('modalClose');
+const avaliacoesLista = document.getElementById('avaliacoesLista');
+const avaliacaoForm = document.getElementById('avaliacaoForm');
+const minhaAvaliacaoInfo = document.getElementById('minhaAvaliacaoInfo');
+const formCriarEditar = document.getElementById('formCriarEditar');
+const notaSelector = document.getElementById('notaSelector');
+const comentarioInput = document.getElementById('comentarioInput');
+const btnEnviar = document.getElementById('btnEnviarAvaliacao');
+const btnCancelarEdicao = document.getElementById('btnCancelarEdicao');
+const loginPrompt = document.getElementById('loginPrompt');
+const avaliacaoErro = document.getElementById('avaliacaoErro');
+
+modalClose.addEventListener('click', fecharModal);
+modal.addEventListener('click', (e) => {
+    if (e.target === modal) fecharModal();
+});
+btnCancelarEdicao.addEventListener('click', cancelarEdicao);
+
+function fecharModal() {
+    modal.classList.remove('open');
+    arvoreModalAtual = null;
+    avaliacaoEditandoId = null;
+}
+
+function renderizarNotaSelector(valorSelecionado) {
+    notaSelector.innerHTML = '';
+    for (let i = 0; i <= 10; i++) {
+        const btn = document.createElement('div');
+        btn.className = 'nota-bolinha' + (i === valorSelecionado ? ' selected' : '');
+        btn.textContent = i;
+        btn.dataset.valor = i;
+        btn.addEventListener('click', () => {
+            notaSelector.querySelectorAll('.nota-bolinha').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        });
+        notaSelector.appendChild(btn);
+    }
+}
+
+function getNotaSelecionada() {
+    const sel = notaSelector.querySelector('.nota-bolinha.selected');
+    return sel ? parseInt(sel.dataset.valor) : null;
+}
+
+function formatarData(dataStr) {
+    if (!dataStr) return '';
+    const d = new Date(dataStr);
+    return d.toLocaleDateString('pt-BR');
+}
+
+function renderizarAvaliacoes(avaliacoes) {
+    if (avaliacoes.length === 0) {
+        avaliacoesLista.innerHTML = '<p class="avaliacao-vazia">Nenhuma avaliação ainda. Seja o primeiro!</p>';
+        return;
+    }
+    avaliacoesLista.innerHTML = avaliacoes.map(a => `
+        <div class="comentario-card">
+            <div class="comentario-header">
+                <span class="comentario-nota">${a.nota}</span>
+                <span class="comentario-nome">${a.userName}</span>
+            </div>
+            ${a.comentario ? `<p class="comentario-texto">${a.comentario}</p>` : ''}
+            <span class="comentario-data">${formatarData(a.createdAt)}</span>
+        </div>
+    `).join('');
+}
+
+function mostrarErro(msg) {
+    avaliacaoErro.textContent = msg;
+    avaliacaoErro.classList.add('show');
+}
+function limparErro() {
+    avaliacaoErro.classList.remove('show');
+    avaliacaoErro.textContent = '';
+}
+
+async function abrirModalArvore(arvoreId) {
+    limparErro();
+    const arvore = todasArvores.find(a => a.id === arvoreId);
+    if (!arvore) return;
+    arvoreModalAtual = arvore;
+    avaliacaoEditandoId = null;
+
+    document.getElementById('arvoreModalNome').textContent = arvore.popularName || 'Desconhecida';
+    document.getElementById('arvoreModalCientifico').textContent = arvore.scientificName || '';
+    document.getElementById('arvoreModalDescricao').textContent = arvore.characteristic || 'Sem descrição.';
+
+    try {
+        const avaliacoes = await buscarAvaliacoes(arvoreId);
+        renderizarAvaliacoes(avaliacoes);
+    } catch (err) {
+        avaliacoesLista.innerHTML = '<p class="avaliacao-vazia">Erro ao carregar avaliações.</p>';
+    }
+
+    // Mostra seção de avaliação
+    avaliacaoForm.style.display = 'block';
+
+    if (!isAuthenticated()) {
+        loginPrompt.style.display = 'block';
+        minhaAvaliacaoInfo.style.display = 'none';
+        formCriarEditar.style.display = 'none';
+    } else {
+        loginPrompt.style.display = 'none';
+        await verificarMinhaAvaliacao(arvoreId);
+    }
+
+    modal.classList.add('open');
+}
+
+async function verificarMinhaAvaliacao(arvoreId) {
+    try {
+        const minhas = await buscarMinhasAvaliacoes();
+        const minha = minhas.find(a => a.arvoreId === arvoreId);
+
+        if (minha) {
+            // Já avaliou — mostra info
+            minhaAvaliacaoInfo.style.display = 'block';
+            minhaAvaliacaoInfo.innerHTML = `
+                <div class="comentario-header">
+                    <span class="comentario-nota">${minha.nota}</span>
+                    <span class="comentario-nome">Sua avaliação</span>
+                </div>
+                ${minha.comentario ? `<p class="comentario-texto">${minha.comentario}</p>` : ''}
+                <div class="minha-avaliacao-acoes">
+                    <button class="btn-avaliacao btn-editar" onclick="iniciarEdicao(${minha.id}, ${minha.nota}, '${(minha.comentario || '').replace(/'/g, "\\'")}')">Editar</button>
+                    <button class="btn-avaliacao btn-excluir" onclick="excluirMinhaAvaliacao(${minha.id})">Excluir</button>
+                </div>
+            `;
+            formCriarEditar.style.display = 'none';
+        } else {
+            // Não avaliou ainda — mostra form
+            minhaAvaliacaoInfo.style.display = 'none';
+            formCriarEditar.style.display = 'block';
+            renderizarNotaSelector(null);
+            comentarioInput.value = '';
+            btnEnviar.textContent = 'Enviar Avaliação';
+            btnCancelarEdicao.style.display = 'none';
+            btnEnviar.onclick = () => submitAvaliacao(arvoreId);
+        }
+    } catch (err) {
+        // Se erro ao buscar, mostra form
+        minhaAvaliacaoInfo.style.display = 'none';
+        formCriarEditar.style.display = 'block';
+        renderizarNotaSelector(null);
+        comentarioInput.value = '';
+        btnEnviar.textContent = 'Enviar Avaliação';
+        btnCancelarEdicao.style.display = 'none';
+        btnEnviar.onclick = () => submitAvaliacao(arvoreId);
+    }
+}
+
+async function submitAvaliacao(arvoreId) {
+    limparErro();
+    const nota = getNotaSelecionada();
+    if (nota === null) {
+        mostrarErro('Selecione uma nota de 0 a 10.');
+        return;
+    }
+    const comentario = comentarioInput.value.trim();
+
+    btnEnviar.disabled = true;
+    btnEnviar.textContent = 'Enviando...';
+
+    try {
+        await criarAvaliacao(arvoreId, nota, comentario);
+        btnEnviar.disabled = false;
+        btnEnviar.textContent = 'Enviar Avaliação';
+        // Recarrega
+        const avaliacoes = await buscarAvaliacoes(arvoreId);
+        renderizarAvaliacoes(avaliacoes);
+        await verificarMinhaAvaliacao(arvoreId);
+    } catch (err) {
+        btnEnviar.disabled = false;
+        btnEnviar.textContent = 'Enviar Avaliação';
+        mostrarErro(err.message);
+    }
+}
+
+function iniciarEdicao(id, nota, comentario) {
+    avaliacaoEditandoId = id;
+    minhaAvaliacaoInfo.style.display = 'none';
+    formCriarEditar.style.display = 'block';
+    renderizarNotaSelector(nota);
+    comentarioInput.value = comentario;
+    btnEnviar.textContent = 'Salvar';
+    btnCancelarEdicao.style.display = 'inline-block';
+    btnEnviar.onclick = () => submitEdicao();
+}
+
+function cancelarEdicao() {
+    avaliacaoEditandoId = null;
+    if (arvoreModalAtual) {
+        verificarMinhaAvaliacao(arvoreModalAtual.id);
+    }
+}
+
+async function submitEdicao() {
+    limparErro();
+    const nota = getNotaSelecionada();
+    if (nota === null) {
+        mostrarErro('Selecione uma nota de 0 a 10.');
+        return;
+    }
+    const comentario = comentarioInput.value.trim();
+    if (!avaliacaoEditandoId || !arvoreModalAtual) return;
+
+    btnEnviar.disabled = true;
+    btnEnviar.textContent = 'Salvando...';
+
+    try {
+        await editarAvaliacao(avaliacaoEditandoId, arvoreModalAtual.id, nota, comentario);
+        btnEnviar.disabled = false;
+        btnEnviar.textContent = 'Salvar';
+        avaliacaoEditandoId = null;
+        const avaliacoes = await buscarAvaliacoes(arvoreModalAtual.id);
+        renderizarAvaliacoes(avaliacoes);
+        await verificarMinhaAvaliacao(arvoreModalAtual.id);
+    } catch (err) {
+        btnEnviar.disabled = false;
+        btnEnviar.textContent = 'Salvar';
+        mostrarErro(err.message);
+    }
+}
+
+async function excluirMinhaAvaliacao(id) {
+    if (!confirm('Tem certeza que deseja excluir sua avaliação?')) return;
+
+    try {
+        await excluirAvaliacao(id);
+        if (arvoreModalAtual) {
+            const avaliacoes = await buscarAvaliacoes(arvoreModalAtual.id);
+            renderizarAvaliacoes(avaliacoes);
+            await verificarMinhaAvaliacao(arvoreModalAtual.id);
+        }
+    } catch (err) {
+        mostrarErro(err.message);
+    }
+}

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entrar - Mapa de Árvores</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --verde-profundo: #1b3b28;
+            --verde-folha: #2d6a4f;
+            --areia: #f4f1ea;
+            --dourado: #c1a673;
+            --texto: #2c2c2c;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Lora', serif;
+            background: var(--areia);
+            color: var(--texto);
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            height: 70px;
+            background: var(--verde-profundo);
+            border-bottom: 3px solid var(--dourado);
+            display: flex;
+            align-items: center;
+            padding: 0 30px;
+        }
+
+        .voltar {
+            color: var(--areia);
+            text-decoration: none;
+            font-size: 15px;
+            padding: 8px 16px;
+            border: 1px solid var(--dourado);
+            border-radius: 4px;
+            font-family: 'Lora', serif;
+            transition: all 0.3s ease;
+        }
+
+        .voltar:hover { background: var(--dourado); color: var(--verde-profundo); }
+
+        .container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 40px;
+            border-radius: 4px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            border: 1px solid rgba(193, 166, 115, 0.2);
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .card h1 {
+            font-family: 'Playfair Display', serif;
+            color: var(--verde-profundo);
+            font-size: 28px;
+            text-align: center;
+            margin: 0 0 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: 'Lora', serif;
+            font-size: 15px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--dourado);
+        }
+
+        .btn-acao {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-family: 'Lora', serif;
+            font-weight: 600;
+            transition: 0.3s;
+            background: var(--verde-folha);
+            color: white;
+            margin-top: 10px;
+        }
+
+        .btn-acao:hover { background: var(--verde-profundo); }
+
+        .btn-acao:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .toggle-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .toggle-link a {
+            color: var(--verde-folha);
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .toggle-link a:hover {
+            color: var(--verde-profundo);
+        }
+
+        .erro {
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            padding: 10px 14px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .erro.show { display: block; }
+
+        .cadastro-fields {
+            display: none;
+        }
+
+        .cadastro-fields.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="index.html" class="voltar">Voltar ao Mapa</a>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <h1 id="titulo">Entrar</h1>
+
+            <div class="erro" id="erro"></div>
+
+            <form id="formAuth">
+                <div class="cadastro-fields" id="cadastroFields">
+                    <div class="form-group">
+                        <label for="inputNome">Nome</label>
+                        <input type="text" id="inputNome" placeholder="Seu nome" autocomplete="name">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="inputEmail">Email</label>
+                    <input type="email" id="inputEmail" placeholder="seu@email.com" required autocomplete="email">
+                </div>
+
+                <div class="form-group">
+                    <label for="inputSenha">Senha</label>
+                    <input type="password" id="inputSenha" placeholder="Sua senha" required autocomplete="current-password">
+                </div>
+
+                <button type="submit" class="btn-acao" id="btnSubmit">Entrar</button>
+            </form>
+
+            <div class="toggle-link">
+                <span id="toggleTexto">Não tem conta?</span>
+                <a id="toggleLink">Criar conta</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script>
+        let isCadastro = false;
+
+        const titulo = document.getElementById('titulo');
+        const form = document.getElementById('formAuth');
+        const btnSubmit = document.getElementById('btnSubmit');
+        const erro = document.getElementById('erro');
+        const cadastroFields = document.getElementById('cadastroFields');
+        const inputNome = document.getElementById('inputNome');
+        const inputEmail = document.getElementById('inputEmail');
+        const inputSenha = document.getElementById('inputSenha');
+        const toggleTexto = document.getElementById('toggleTexto');
+        const toggleLink = document.getElementById('toggleLink');
+
+        toggleLink.addEventListener('click', () => {
+            isCadastro = !isCadastro;
+            if (isCadastro) {
+                titulo.textContent = 'Criar Conta';
+                btnSubmit.textContent = 'Cadastrar';
+                toggleTexto.textContent = 'Já tem conta?';
+                toggleLink.textContent = 'Fazer login';
+                cadastroFields.classList.add('show');
+            } else {
+                titulo.textContent = 'Entrar';
+                btnSubmit.textContent = 'Entrar';
+                toggleTexto.textContent = 'Não tem conta?';
+                toggleLink.textContent = 'Criar conta';
+                cadastroFields.classList.remove('show');
+            }
+            erro.classList.remove('show');
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            erro.classList.remove('show');
+            btnSubmit.disabled = true;
+            btnSubmit.textContent = isCadastro ? 'Cadastrando...' : 'Entrando...';
+
+            try {
+                if (isCadastro) {
+                    const nome = inputNome.value.trim();
+                    if (!nome) throw new Error('Nome é obrigatório');
+                    await register(nome, inputEmail.value, inputSenha.value);
+                } else {
+                    await login(inputEmail.value, inputSenha.value);
+                }
+                window.location.href = 'index.html';
+            } catch (err) {
+                erro.textContent = err.message;
+                erro.classList.add('show');
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = isCadastro ? 'Cadastrar' : 'Entrar';
+            }
+        });
+    </script>
+</body>
+</html>
