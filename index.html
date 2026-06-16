@@ -3,13 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' https://unpkg.com;
+        style-src 'self' 'unsafe-inline' https://unpkg.com;
+        img-src 'self' https://*.tile.openstreetmap.org data:;
+        connect-src *;
+    ">
     <title>Mapa de Árvores</title>
     
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/supercluster@7.1.5/dist/supercluster.min.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+    <script src="https://unpkg.com/supercluster@7.1.5/dist/supercluster.min.js" integrity="sha384-1m5uiduZOnTZdlzIPNoioLQcSEe0nFXLphOIC4HUvI7Zieut/L2CCgsjDv7pLgDo" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="fonts/fonts.css">
     
     <style>
         :root {
@@ -440,6 +445,39 @@
         }
         .avaliacao-erro.show { display: block; }
 
+        .cookie-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--verde-profundo);
+            color: var(--areia);
+            padding: 20px 30px;
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.3);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .cookie-banner.show { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 15px; }
+        .cookie-banner p { margin: 0; flex: 1; min-width: 200px; }
+        .cookie-banner a { color: var(--dourado); }
+        .cookie-buttons { display: flex; gap: 10px; flex-shrink: 0; }
+        .cookie-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Lora', serif;
+            font-size: 14px;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .cookie-btn-accept { background: var(--dourado); color: var(--verde-profundo); }
+        .cookie-btn-accept:hover { background: #d4b98a; }
+        .cookie-btn-refuse { background: transparent; color: var(--areia); border: 1px solid var(--dourado); }
+        .cookie-btn-refuse:hover { background: rgba(255,255,255,0.1); }
+
         @media (max-width: 600px) {
             .navbar { padding: 0 15px; height: 60px; gap: 10px; }
             .marca { font-size: 18px; }
@@ -458,7 +496,7 @@
         
         <div class="spacer"></div>
         
-        <span id="saudacao" class="nav-saudacao" style="display:none; color: var(--dourado); font-size: 14px; white-space: nowrap;"></span>
+        <span id="saudacao" class="nav-saudacao" style="display:none;"></span>
         <a href="login.html" class="nav-link" id="btnEntrar">Entrar</a>
         <button class="nav-link" id="btnSair" style="display:none;">Sair</button>
         <a href="sobre.html" class="nav-link">Sobre</a>
@@ -505,6 +543,18 @@
         </div>
     </div>
 
+    <div class="cookie-banner" id="cookieBanner">
+        <p>
+            Este site utiliza tiles do <strong>OpenStreetMap</strong> e bibliotecas de CDN para funcionar.
+            Ao continuar, você consente com o tratamento do seu IP e User-Agent por esses serviços.
+            Leia nossa <a href="privacidade.html">Política de Privacidade</a>.
+        </p>
+        <div class="cookie-buttons">
+            <button class="cookie-btn cookie-btn-accept" id="cookieAccept">Aceitar</button>
+            <button class="cookie-btn cookie-btn-refuse" id="cookieRefuse">Recusar</button>
+        </div>
+    </div>
+
     <div class="painel-filtro" id="painelFiltro">
         <span class="close" id="closeFiltro">&times;</span>
         <h3>Catálogo de Filtros</h3>
@@ -540,8 +590,34 @@
             carregarArvoresNaTela();
             painelFiltro.classList.remove('open');
         });
+
+        // Cookie consent banner
+        function getConsent() {
+            return localStorage.getItem('cookieConsent');
+        }
+        function setConsent(value) {
+            localStorage.setItem('cookieConsent', value);
+        }
+        function showCookieBanner() {
+            document.getElementById('cookieBanner').classList.add('show');
+        }
+        function hideCookieBanner() {
+            document.getElementById('cookieBanner').classList.remove('show');
+        }
+        document.getElementById('cookieAccept').addEventListener('click', () => {
+            setConsent('accepted');
+            hideCookieBanner();
+        });
+        document.getElementById('cookieRefuse').addEventListener('click', () => {
+            setConsent('refused');
+            hideCookieBanner();
+        });
+        if (!getConsent()) {
+            showCookieBanner();
+        }
     </script>
 
+    <script src="config.js"></script>
     <script src="auth.js"></script>
     <script src="avaliacoes.js"></script>
     <script>
@@ -549,20 +625,23 @@
         const btnEntrar = document.getElementById('btnEntrar');
         const btnSair = document.getElementById('btnSair');
 
-        if (isAuthenticated()) {
-            saudacao.textContent = 'Olá, ' + getUserName();
-            saudacao.style.display = 'inline';
-            btnEntrar.style.display = 'none';
-            btnSair.style.display = 'inline-block';
+        btnSair.addEventListener('click', logout);
 
-            btnSair.addEventListener('click', logout);
-        } else {
-            btnEntrar.style.display = 'inline-block';
-            btnSair.style.display = 'none';
-        }
+        (async () => {
+            await checkAuth();
+            if (isAuthenticated()) {
+                saudacao.textContent = 'Olá, ' + getUserName();
+                saudacao.style.display = 'inline';
+                btnEntrar.style.display = 'none';
+                btnSair.style.display = 'inline-block';
+            } else {
+                btnEntrar.style.display = 'inline-block';
+                btnSair.style.display = 'none';
+            }
+        })();
     </script>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
     <script src="mapa.js"></script>
 </body>
 </html>
