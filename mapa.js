@@ -1,9 +1,18 @@
 const mapa = L.map('meu_mapa').setView([-23.4205, -51.9333], 13);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap'
-}).addTo(mapa);
+function initTiles(consent) {
+    if (consent === 'accepted' || consent === null) {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(mapa);
+    } else {
+        L.tileLayer('', { maxZoom: 19 }).addTo(mapa);
+    }
+}
+
+const cookieConsent = localStorage.getItem('cookieConsent');
+initTiles(cookieConsent);
 
 const camadaClusters = L.layerGroup().addTo(mapa);
 const camadaArvores = L.layerGroup().addTo(mapa);
@@ -107,8 +116,14 @@ function renderizarClusters() {
                 .bindPopup(`<b>${props.point_count} árvores</b>`)
                 .addTo(camadaClusters);
         } else {
+            function escHtml(str) {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
             L.marker([lat, lng], { icon: iconArvore })
-                .bindPopup(`<b>${props.nome}</b><br>${props.cientifico}<br><a href="#" onclick="abrirModalArvore(${props.id})" style="color:#2d6a4f;">Ver avaliações</a>`)
+                .bindPopup(`<b>${escHtml(props.nome)}</b><br>${escHtml(props.cientifico)}<br><a href="#" data-arvore-id="${escHtml(props.id)}" style="color:#2d6a4f;">Ver avaliações</a>`)
                 .on('click', () => abrirModalArvore(props.id))
                 .addTo(camadaArvores);
         }
@@ -137,7 +152,7 @@ async function carregarArvoresNaTela() {
     
     mostraLoading(true);
     
-    const API_ARVORES = 'http://localhost:8080/api/arvores';
+    const API_ARVORES = `${API_BASE}/api/arvores`;
     let url = `${API_ARVORES}/viewport?minLat=${bounds.getSouth()}&maxLat=${bounds.getNorth()}&minLng=${bounds.getWest()}&maxLng=${bounds.getEast()}&centerLat=${getCentroViewport().lat}&centerLng=${getCentroViewport().lng}&limit=1000&shuffle=${isShuffle}`;
     
     if (filtroNome) {
