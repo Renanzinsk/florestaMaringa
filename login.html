@@ -3,10 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline';
+        style-src 'self' 'unsafe-inline';
+        connect-src *;
+    ">
     <title>Entrar - Mapa de Árvores</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="fonts/fonts.css">
     <style>
         :root {
             --verde-profundo: #1b3b28;
@@ -160,6 +164,28 @@
         .cadastro-fields.show {
             display: block;
         }
+
+        .consent-group {
+            display: none;
+            margin-bottom: 20px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .consent-group.show {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .consent-group input {
+            margin-top: 3px;
+            flex-shrink: 0;
+        }
+
+        .consent-group a {
+            color: var(--verde-folha);
+        }
     </style>
 </head>
 <body>
@@ -174,12 +200,20 @@
             <div class="erro" id="erro"></div>
 
             <form id="formAuth">
-                <div class="cadastro-fields" id="cadastroFields">
-                    <div class="form-group">
-                        <label for="inputNome">Nome</label>
-                        <input type="text" id="inputNome" placeholder="Seu nome" autocomplete="name">
+                    <div class="cadastro-fields" id="cadastroFields">
+                        <div class="form-group">
+                            <label for="inputNome">Nome</label>
+                            <input type="text" id="inputNome" placeholder="Seu nome" autocomplete="name">
+                        </div>
+                        <div class="form-group">
+                            <label for="inputDisplayName">Nome de exibição (apelido)</label>
+                            <input type="text" id="inputDisplayName" placeholder="Como você quer aparecer" autocomplete="nickname">
+                        </div>
+                        <div class="consent-group" id="consentGroup">
+                            <input type="checkbox" id="inputConsent">
+                            <label for="inputConsent">Aceito a <a href="privacidade.html" target="_blank">Política de Privacidade</a> e concordo com o tratamento dos meus dados pessoais.</label>
+                        </div>
                     </div>
-                </div>
 
                 <div class="form-group">
                     <label for="inputEmail">Email</label>
@@ -201,6 +235,7 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
     <script src="auth.js"></script>
     <script>
         let isCadastro = false;
@@ -211,10 +246,13 @@
         const erro = document.getElementById('erro');
         const cadastroFields = document.getElementById('cadastroFields');
         const inputNome = document.getElementById('inputNome');
+        const inputDisplayName = document.getElementById('inputDisplayName');
         const inputEmail = document.getElementById('inputEmail');
         const inputSenha = document.getElementById('inputSenha');
         const toggleTexto = document.getElementById('toggleTexto');
         const toggleLink = document.getElementById('toggleLink');
+        const consentGroup = document.getElementById('consentGroup');
+        const inputConsent = document.getElementById('inputConsent');
 
         toggleLink.addEventListener('click', () => {
             isCadastro = !isCadastro;
@@ -224,12 +262,16 @@
                 toggleTexto.textContent = 'Já tem conta?';
                 toggleLink.textContent = 'Fazer login';
                 cadastroFields.classList.add('show');
+                consentGroup.classList.add('show');
+                inputSenha.autocomplete = 'new-password';
             } else {
                 titulo.textContent = 'Entrar';
                 btnSubmit.textContent = 'Entrar';
                 toggleTexto.textContent = 'Não tem conta?';
                 toggleLink.textContent = 'Criar conta';
                 cadastroFields.classList.remove('show');
+                consentGroup.classList.remove('show');
+                inputSenha.autocomplete = 'current-password';
             }
             erro.classList.remove('show');
         });
@@ -244,7 +286,8 @@
                 if (isCadastro) {
                     const nome = inputNome.value.trim();
                     if (!nome) throw new Error('Nome é obrigatório');
-                    await register(nome, inputEmail.value, inputSenha.value);
+                    if (!inputConsent.checked) throw new Error('Você precisa aceitar a Política de Privacidade');
+                    await register(nome, inputDisplayName.value.trim(), inputEmail.value, inputSenha.value);
                 } else {
                     await login(inputEmail.value, inputSenha.value);
                 }
