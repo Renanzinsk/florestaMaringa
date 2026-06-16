@@ -1,23 +1,23 @@
-const API_AVALIACOES = 'http://localhost:8080/api/avaliacoes';
+const API_AVALIACOES = `${API_BASE}/api/avaliacoes`;
 
 async function buscarAvaliacoes(arvoreId) {
-    const resp = await fetch(`${API_AVALIACOES}/arvore/${arvoreId}`);
+    const resp = await authFetch(`${API_AVALIACOES}/arvore/${arvoreId}`);
     if (!resp.ok) throw new Error('Erro ao buscar avaliações');
     return resp.json();
 }
 
 async function buscarMinhasAvaliacoes() {
-    const resp = await fetch(`${API_AVALIACOES}/usuario`, {
-        headers: getAuthHeaders()
+    const resp = await authFetch(`${API_AVALIACOES}/usuario`, {
+        headers: { 'Content-Type': 'application/json' }
     });
     if (!resp.ok) throw new Error('Erro ao buscar suas avaliações');
     return resp.json();
 }
 
 async function criarAvaliacao(arvoreId, nota, comentario) {
-    const resp = await fetch(API_AVALIACOES, {
+    const resp = await authFetch(API_AVALIACOES, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ arvoreId, nota, comentario })
     });
     if (!resp.ok) {
@@ -28,9 +28,9 @@ async function criarAvaliacao(arvoreId, nota, comentario) {
 }
 
 async function editarAvaliacao(id, arvoreId, nota, comentario) {
-    const resp = await fetch(`${API_AVALIACOES}/${id}`, {
+    const resp = await authFetch(`${API_AVALIACOES}/${id}`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ arvoreId, nota, comentario })
     });
     if (!resp.ok) {
@@ -41,9 +41,9 @@ async function editarAvaliacao(id, arvoreId, nota, comentario) {
 }
 
 async function excluirAvaliacao(id) {
-    const resp = await fetch(`${API_AVALIACOES}/${id}`, {
+    const resp = await authFetch(`${API_AVALIACOES}/${id}`, {
         method: 'DELETE',
-        headers: getAuthHeaders()
+        headers: { 'Content-Type': 'application/json' }
     });
     if (!resp.ok) {
         const err = await resp.json();
