@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sobre - Mapa de Árvores</title>
-    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="fonts/fonts.css">
     <style>
         :root {
             --verde-profundo: #1b3b28;
@@ -76,6 +76,53 @@
             border-bottom: 1px solid var(--verde-profundo);
         }
 
+        .auth-section {
+            margin-top: 50px;
+            padding: 25px;
+            background: #faf9f5;
+            border-left: 5px solid var(--dourado);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .auth-section .btn-auth {
+            background: transparent;
+            border: 1px solid var(--verde-folha);
+            color: var(--verde-folha);
+            font-family: 'Lora', serif;
+            font-size: 15px;
+            padding: 8px 18px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .auth-section .btn-auth:hover {
+            background: var(--verde-folha);
+            color: #fff;
+        }
+
+        .auth-section .btn-auth.btn-danger:hover {
+            background: #a33;
+            border-color: #a33;
+            color: #fff;
+        }
+
+        .auth-section .link-privacidade {
+            color: var(--verde-folha);
+            text-decoration: none;
+            font-size: 15px;
+            border-bottom: 1px dashed var(--verde-folha);
+            transition: color 0.3s, border-color 0.3s;
+        }
+
+        .auth-section .link-privacidade:hover {
+            color: var(--verde-profundo);
+            border-bottom: 1px solid var(--verde-profundo);
+        }
+
         @media (max-width: 600px) {
             .container { margin: 40px 15px; padding: 25px; }
             h1 { font-size: 28px; }
@@ -89,7 +136,9 @@
 
     <div class="container">
         <h1>Sobre este site</h1>
-        
+
+        <p><a href="privacidade.html">Política de Privacidade</a></p>
+
         <h2>Objetivo</h2>
         <p>Buscar desenvolver uma forma de retratar, de maneira prática e interativa, a visualização das árvores da cidade. Através deste mapeamento em um catálogo digital, buscamos auxiliar na melhor gestão ambiental e na valorização da nossa flora urbana, permitindo que cidadãos e gestores tenham uma visão clara e acessível do patrimônio natural ao seu redor.</p>
         
@@ -101,6 +150,33 @@
                 <p>ou </p>
                 <p>acessar a base de dados completa através de seu repositório no <a href="https://github.com/brunomioto/arvores_mga" target="_blank" class="link-credito">GitHub</a>.</p>
         </div>
+
+        <div class="auth-section">
+            <button class="btn-auth" id="btnExcluirConta" style="display:none;">Excluir Conta</button>
+            <button class="btn-auth" id="btnRevogarConsentimento" style="display:none;">Revogar Consentimento</button>
+            <a href="privacidade.html" class="link-privacidade">Política de Privacidade</a>
+        </div>
     </div>
+
+    <script src="config.js"></script>
+    <script src="auth.js"></script>
+    <script>
+        const btnExcluirConta = document.getElementById('btnExcluirConta');
+        const btnRevogarConsentimento = document.getElementById('btnRevogarConsentimento');
+
+        btnExcluirConta.addEventListener('click', deleteAccount);
+        btnRevogarConsentimento.addEventListener('click', revokeConsent);
+
+        (async () => {
+            await checkAuth();
+            if (isAuthenticated()) {
+                btnExcluirConta.style.display = 'inline-block';
+                btnRevogarConsentimento.style.display = 'inline-block';
+            } else {
+                btnExcluirConta.style.display = 'none';
+                btnRevogarConsentimento.style.display = 'none';
+            }
+        })();
+    </script>
 </body>
 </html>

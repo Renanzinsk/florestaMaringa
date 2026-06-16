@@ -3,13 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' https://unpkg.com;
+        style-src 'self' 'unsafe-inline' https://unpkg.com;
+        img-src 'self' https://*.tile.openstreetmap.org data:;
+        connect-src *;
+    ">
     <title>Mapa de Árvores</title>
     
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/supercluster@7.1.5/dist/supercluster.min.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+    <script src="https://unpkg.com/supercluster@7.1.5/dist/supercluster.min.js" integrity="sha384-1m5uiduZOnTZdlzIPNoioLQcSEe0nFXLphOIC4HUvI7Zieut/L2CCgsjDv7pLgDo" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="fonts/fonts.css">
     
     <style>
         :root {
@@ -62,6 +67,12 @@
         .nav-link:hover {
             background: var(--dourado);
             color: var(--verde-profundo);
+        }
+
+        .nav-saudacao {
+            color: var(--dourado);
+            font-size: 14px;
+            white-space: nowrap;
         }
 
         /* Usamos um espaçador flexível para jogar o "Sobre" para a direita */
@@ -170,12 +181,310 @@
             font-size: 11px;
         }
         
+        /* === Modal de Avaliações === */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.open { display: flex; }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            font-size: 32px;
+            cursor: pointer;
+            color: var(--texto);
+            background: none;
+            border: none;
+            line-height: 1;
+            z-index: 10;
+        }
+        .modal-close:hover { color: var(--verde-profundo); }
+
+        .modal-body {
+            display: grid;
+            grid-template-columns: 35% 65%;
+            min-height: 400px;
+        }
+
+        .modal-esquerda {
+            padding: 30px;
+            background: var(--areia);
+            border-right: 1px solid var(--dourado);
+            border-radius: 8px 0 0 8px;
+        }
+        .modal-esquerda h2 {
+            font-family: 'Playfair Display', serif;
+            color: var(--verde-profundo);
+            margin: 0 0 6px;
+            font-size: 24px;
+        }
+        .modal-esquerda .cientifico {
+            font-style: italic;
+            color: #666;
+            margin: 0 0 16px;
+            font-size: 14px;
+        }
+        .modal-esquerda .descricao {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--texto);
+        }
+        .modal-esquerda .foto-placeholder {
+            display: none;
+            margin-top: 20px;
+            width: 100%;
+            height: 160px;
+            background: #ddd;
+            border-radius: 4px;
+        }
+
+        .modal-direita {
+            padding: 30px;
+        }
+        .modal-direita h3 {
+            font-family: 'Playfair Display', serif;
+            color: var(--verde-profundo);
+            margin: 0 0 20px;
+            font-size: 20px;
+            border-bottom: 1px solid var(--dourado);
+            padding-bottom: 8px;
+        }
+
+        .comentario-card {
+            padding: 14px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .comentario-card:last-child { border-bottom: none; }
+        .comentario-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+        .comentario-nome {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--verde-profundo);
+        }
+        .comentario-nota {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--verde-folha);
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .comentario-texto {
+            font-size: 14px;
+            color: var(--texto);
+            line-height: 1.5;
+            margin: 4px 0;
+        }
+        .comentario-data {
+            font-size: 11px;
+            color: #999;
+        }
+
+        .avaliacao-vazia {
+            color: #999;
+            font-style: italic;
+            font-size: 14px;
+        }
+
+        .login-prompt {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+        .login-prompt a {
+            color: var(--verde-folha);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        /* Seletor de nota (bolinhas 0-10) */
+        .nota-selector {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .nota-bolinha {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 2px solid #ccc;
+            background: white;
+            color: var(--texto);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .nota-bolinha:hover {
+            border-color: var(--verde-folha);
+            color: var(--verde-folha);
+        }
+        .nota-bolinha.selected {
+            border-color: var(--verde-folha);
+            background: var(--verde-folha);
+            color: white;
+        }
+
+        .comentario-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: 'Lora', serif;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 70px;
+            box-sizing: border-box;
+            margin-bottom: 12px;
+        }
+        .comentario-input:focus {
+            outline: none;
+            border-color: var(--dourado);
+        }
+
+        .minha-avaliacao {
+            background: #f9f7f3;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid var(--dourado);
+        }
+        .minha-avaliacao .comentario-header {
+            margin-bottom: 8px;
+        }
+        .minha-avaliacao-acoes {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .btn-avaliacao {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Lora', serif;
+            font-size: 13px;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .btn-editar {
+            background: var(--verde-folha);
+            color: white;
+        }
+        .btn-editar:hover { background: var(--verde-profundo); }
+        .btn-excluir {
+            background: transparent;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+        .btn-excluir:hover { background: #fef2f2; }
+        .btn-enviar {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Lora', serif;
+            font-size: 15px;
+            font-weight: 600;
+            background: var(--verde-folha);
+            color: white;
+            transition: 0.3s;
+        }
+        .btn-enviar:hover { background: var(--verde-profundo); }
+        .btn-enviar:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .btn-cancelar {
+            background: transparent;
+            color: var(--texto);
+            border: 1px solid #ccc;
+        }
+        .btn-cancelar:hover { background: #f5f5f5; }
+
+        .avaliacao-erro {
+            color: #b91c1c;
+            font-size: 13px;
+            margin-bottom: 10px;
+            display: none;
+        }
+        .avaliacao-erro.show { display: block; }
+
+        .cookie-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--verde-profundo);
+            color: var(--areia);
+            padding: 20px 30px;
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.3);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .cookie-banner.show { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 15px; }
+        .cookie-banner p { margin: 0; flex: 1; min-width: 200px; }
+        .cookie-banner a { color: var(--dourado); }
+        .cookie-buttons { display: flex; gap: 10px; flex-shrink: 0; }
+        .cookie-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Lora', serif;
+            font-size: 14px;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .cookie-btn-accept { background: var(--dourado); color: var(--verde-profundo); }
+        .cookie-btn-accept:hover { background: #d4b98a; }
+        .cookie-btn-refuse { background: transparent; color: var(--areia); border: 1px solid var(--dourado); }
+        .cookie-btn-refuse:hover { background: rgba(255,255,255,0.1); }
+
         @media (max-width: 600px) {
             .navbar { padding: 0 15px; height: 60px; gap: 10px; }
             .marca { font-size: 18px; }
             .nav-link { padding: 6px 10px; font-size: 13px; }
+            .nav-saudacao { font-size: 12px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
             #meu_mapa, .painel-filtro { top: 60px; height: calc(100vh - 60px); }
-            .painel-filtro { width: 100%; left: -100%; } /* No mobile garante que saia toda da tela */
+            .painel-filtro { width: 100%; left: -100%; }
         }
     </style>
 </head>
@@ -187,12 +496,64 @@
         
         <div class="spacer"></div>
         
+        <span id="saudacao" class="nav-saudacao" style="display:none;"></span>
+        <a href="login.html" class="nav-link" id="btnEntrar">Entrar</a>
+        <button class="nav-link" id="btnSair" style="display:none;">Sair</button>
         <a href="sobre.html" class="nav-link">Sobre</a>
     </nav>
     
     <div id="meu_mapa"></div>
 
     <div class="loading" id="loading">Carregando...</div>
+
+    <!-- Modal de Avaliações -->
+    <div class="modal-overlay" id="modalArvore">
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">&times;</button>
+            <div class="modal-body">
+                <div class="modal-esquerda">
+                    <h2 id="arvoreModalNome"></h2>
+                    <p class="cientifico" id="arvoreModalCientifico"></p>
+                    <p class="descricao" id="arvoreModalDescricao"></p>
+                    <div class="foto-placeholder" id="arvoreModalFoto"></div>
+                </div>
+                <div class="modal-direita">
+                    <h3>Avaliações</h3>
+                    <div id="avaliacoesLista"></div>
+
+                    <div id="avaliacaoForm" style="display:none;">
+                        <div class="avaliacao-erro" id="avaliacaoErro"></div>
+
+                        <div id="minhaAvaliacaoInfo" style="display:none;" class="minha-avaliacao"></div>
+
+                        <div id="formCriarEditar" style="display:none;">
+                            <label style="font-weight:600;font-size:14px;display:block;margin-bottom:8px;">Nota:</label>
+                            <div class="nota-selector" id="notaSelector"></div>
+                            <textarea class="comentario-input" id="comentarioInput" placeholder="Escreva seu comentário..."></textarea>
+                            <button class="btn-enviar" id="btnEnviarAvaliacao">Enviar Avaliação</button>
+                            <button class="btn-enviar btn-cancelar" id="btnCancelarEdicao" style="display:none;margin-top:8px;">Cancelar</button>
+                        </div>
+
+                        <div class="login-prompt" id="loginPrompt" style="display:none;">
+                            Faça <a href="login.html">login</a> para avaliar esta árvore.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="cookie-banner" id="cookieBanner">
+        <p>
+            Este site utiliza tiles do <strong>OpenStreetMap</strong> e bibliotecas de CDN para funcionar.
+            Ao continuar, você consente com o tratamento do seu IP e User-Agent por esses serviços.
+            Leia nossa <a href="privacidade.html">Política de Privacidade</a>.
+        </p>
+        <div class="cookie-buttons">
+            <button class="cookie-btn cookie-btn-accept" id="cookieAccept">Aceitar</button>
+            <button class="cookie-btn cookie-btn-refuse" id="cookieRefuse">Recusar</button>
+        </div>
+    </div>
 
     <div class="painel-filtro" id="painelFiltro">
         <span class="close" id="closeFiltro">&times;</span>
@@ -229,9 +590,58 @@
             carregarArvoresNaTela();
             painelFiltro.classList.remove('open');
         });
+
+        // Cookie consent banner
+        function getConsent() {
+            return localStorage.getItem('cookieConsent');
+        }
+        function setConsent(value) {
+            localStorage.setItem('cookieConsent', value);
+        }
+        function showCookieBanner() {
+            document.getElementById('cookieBanner').classList.add('show');
+        }
+        function hideCookieBanner() {
+            document.getElementById('cookieBanner').classList.remove('show');
+        }
+        document.getElementById('cookieAccept').addEventListener('click', () => {
+            setConsent('accepted');
+            hideCookieBanner();
+        });
+        document.getElementById('cookieRefuse').addEventListener('click', () => {
+            setConsent('refused');
+            hideCookieBanner();
+        });
+        if (!getConsent()) {
+            showCookieBanner();
+        }
     </script>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="config.js"></script>
+    <script src="auth.js"></script>
+    <script src="avaliacoes.js"></script>
+    <script>
+        const saudacao = document.getElementById('saudacao');
+        const btnEntrar = document.getElementById('btnEntrar');
+        const btnSair = document.getElementById('btnSair');
+
+        btnSair.addEventListener('click', logout);
+
+        (async () => {
+            await checkAuth();
+            if (isAuthenticated()) {
+                saudacao.textContent = 'Olá, ' + getUserName();
+                saudacao.style.display = 'inline';
+                btnEntrar.style.display = 'none';
+                btnSair.style.display = 'inline-block';
+            } else {
+                btnEntrar.style.display = 'inline-block';
+                btnSair.style.display = 'none';
+            }
+        })();
+    </script>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
     <script src="mapa.js"></script>
 </body>
 </html>
